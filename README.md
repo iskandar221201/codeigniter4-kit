@@ -38,9 +38,11 @@ A production-ready CodeIgniter 4 starter kit with structured API responses, Shie
 
 ## Quick Start
 
+Click **Use this template** → **Create a new repository**, then:
+
 ```bash
-# 1. Clone and enter the project
-git clone <repo-url> my-project && cd my-project
+# 1. Enter the project
+cd my-project
 
 # 2. Copy environment template and fill in DB credentials
 cp .env.example .env
