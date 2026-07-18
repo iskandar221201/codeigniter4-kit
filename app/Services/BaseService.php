@@ -1,7 +1,5 @@
 <?php
-
 declare(strict_types=1);
-
 namespace App\Services;
 
 use CodeIgniter\Model;
@@ -14,7 +12,7 @@ abstract class BaseService
 {
     /** @var string Must be set in the child class to bind a Model. */
     protected string $modelClass;
-    
+
     protected ?Model $model = null;
     protected BaseValidator $validator;
 
@@ -34,7 +32,6 @@ abstract class BaseService
         $order   = $filters['order'] ?? 'asc';
 
         if ($search) {
-            // QueryScopesTrait::search() gracefully handles empty searchableFields
             $this->model->search($search);
         }
 
@@ -53,15 +50,16 @@ abstract class BaseService
 
         if ($perPage > 0) {
             $perPage = min($perPage, AppConstants::MAX_PER_PAGE);
-            $data = $this->model->paginate($perPage);
+            $data    = $this->model->paginate($perPage);
+
             return [
-                'data'  => $data,
-                'pager' => $this->model->pager
+                'data'  => $data ?? [],   // FIX: paginate() returns null on empty result
+                'pager' => $this->model->pager,
             ];
         }
 
         return [
-            'data' => $this->model->findAll()
+            'data' => $this->model->findAll(),
         ];
     }
 
@@ -73,20 +71,25 @@ abstract class BaseService
     public function create(array $data): int|string
     {
         $id = $this->model->insert($data, true);
-        
+
         if ($id === false) {
             throw new ServiceException('Failed to create record', AppConstants::HTTP_SERVER_ERROR);
         }
-        
+
         return $id;
     }
 
     public function update(int|string $id, array $data): bool
     {
+        // FIX: check existence first so no-op updates don't false-404
+        if (!$this->model->find($id)) {
+            throw new ServiceException('Record not found', AppConstants::HTTP_NOT_FOUND);
+        }
+
         $result = $this->model->update($id, $data);
 
-        if ($result === false || $this->model->db->affectedRows() === 0) {
-            throw new ServiceException('Record not found or not modified', AppConstants::HTTP_NOT_FOUND);
+        if ($result === false) {
+            throw new ServiceException('Failed to update record', AppConstants::HTTP_SERVER_ERROR);
         }
 
         return true;
@@ -94,10 +97,15 @@ abstract class BaseService
 
     public function delete(int|string $id): bool
     {
+        // FIX: check existence first — soft delete doesn't reliably reflect in affectedRows()
+        if (!$this->model->find($id)) {
+            throw new ServiceException('Record not found', AppConstants::HTTP_NOT_FOUND);
+        }
+
         $result = $this->model->delete($id);
 
-        if ($result === false || $this->model->db->affectedRows() === 0) {
-            throw new ServiceException('Record not found', AppConstants::HTTP_NOT_FOUND);
+        if ($result === false) {
+            throw new ServiceException('Failed to delete record', AppConstants::HTTP_SERVER_ERROR);
         }
 
         return true;
@@ -106,11 +114,11 @@ abstract class BaseService
     public function validate(array $data, array $rules, array $messages = []): bool
     {
         $valid = $this->validator->validate($data, $rules, $messages);
-        
+
         if ($valid === false) {
             throw new ValidationException($this->validator->getErrors());
         }
-        
+
         return true;
     }
 }
