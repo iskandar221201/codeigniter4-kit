@@ -1,5 +1,4 @@
 # CI4 Production Grade Kit
-
 ![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?style=flat-square&logo=php&logoColor=white)
 ![CodeIgniter](https://img.shields.io/badge/CodeIgniter-4.x-EF4223?style=flat-square&logo=codeigniter&logoColor=white)
 ![Shield](https://img.shields.io/badge/Shield-Auth-22c55e?style=flat-square)
@@ -73,7 +72,7 @@ Request → Filter Stack → Controller → Service → Model → Database
 |---|---|
 | **Controller** | Receives the request, delegates to the Service, returns a JSON response. Never accesses a Model directly. |
 | **Service** | Holds business logic, validates input, orchestrates Model calls. |
-| **Model** | Extends `BaseModel`, handles DB queries and soft deletes. |
+| **Model** | App models extend `BaseModel` (soft delete, search/dateRange scopes). Shield-based models extend `ShieldUserModel` directly. Both are compatible with `BaseService`. |
 
 ---
 
@@ -105,13 +104,14 @@ app/
 │   └── AppLogger.php         # Static facade for structured JSON logging
 ├── Models/
 │   ├── BaseModel.php         # Timestamps, soft delete, search/dateRange scopes
-│   └── UserModel.php         # Extends Shield's UserModel
+│   └── UserModel.php         # Extends Shield's UserModel + QueryScopesTrait
 ├── Services/
 │   ├── BaseService.php       # CRUD + pagination + validation wiring
 │   └── UserService.php       # User resource — full reference implementation
 ├── Traits/
 │   ├── ApiResponseTrait.php  # success(), error(), created(), paginate(), noContent()
-│   └── LoggableTrait.php     # logInfo(), logWarning(), logError() with JSON payload
+│   ├── LoggableTrait.php     # logInfo(), logWarning(), logError() with JSON payload
+│   └── QueryScopesTrait.php  # search(), dateRange(), active() — used by BaseModel and Shield-based models
 └── Validation/
     └── BaseValidator.php     # Thin wrapper around CI4 Validation service
 ```
@@ -218,22 +218,25 @@ Every log entry is a structured JSON line written to `writable/logs/`:
 Example: adding a `Post` resource.
 
 **1. Create the migration**
+
 ```bash
 php spark make:migration CreatePostsTable
 php spark migrate
 ```
 
 **2. Create the Model** — `app/Models/PostModel.php`
+
 ```php
 class PostModel extends BaseModel
 {
-    protected $table            = 'posts';
-    protected $allowedFields    = ['title', 'body', 'user_id'];
+    protected $table                  = 'posts';
+    protected $allowedFields          = ['title', 'body', 'user_id'];
     protected array $searchableFields = ['title', 'body'];
 }
 ```
 
 **3. Create the Service** — `app/Services/PostService.php`
+
 ```php
 class PostService extends BaseService
 {
@@ -242,6 +245,7 @@ class PostService extends BaseService
 ```
 
 **4. Create the Controller** — `app/Controllers/Api/PostController.php`
+
 ```php
 class PostController extends BaseApiController
 {
@@ -254,13 +258,14 @@ class PostController extends BaseApiController
 ```
 
 **5. Register routes** in `app/Config/Routes.php`
+
 ```php
 $routes->group('api', ['filter' => 'apiKeyFilter'], static function ($routes) {
-    $routes->get('posts',          'Api\PostController::index');
-    $routes->post('posts',         'Api\PostController::create');
-    $routes->get('posts/(:num)',   'Api\PostController::show/$1');
-    $routes->put('posts/(:num)',   'Api\PostController::update/$1');
-    $routes->delete('posts/(:num)','Api\PostController::delete/$1');
+    $routes->get('posts',           'Api\PostController::index');
+    $routes->post('posts',          'Api\PostController::create');
+    $routes->get('posts/(:num)',    'Api\PostController::show/$1');
+    $routes->put('posts/(:num)',    'Api\PostController::update/$1');
+    $routes->delete('posts/(:num)', 'Api\PostController::delete/$1');
 });
 ```
 
