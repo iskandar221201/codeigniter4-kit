@@ -1,4 +1,4 @@
-# CI4 Production Grade Kit
+# CodeIgniter 4  Production Grade Kit
 ![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?style=flat-square&logo=php&logoColor=white)
 ![CodeIgniter](https://img.shields.io/badge/CodeIgniter-4.x-EF4223?style=flat-square&logo=codeigniter&logoColor=white)
 ![Shield](https://img.shields.io/badge/Shield-Auth-22c55e?style=flat-square)
