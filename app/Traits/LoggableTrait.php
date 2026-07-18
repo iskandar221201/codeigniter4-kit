@@ -10,6 +10,11 @@ trait LoggableTrait
      * If $e is provided, an 'exception' key is added to the payload.
      * If json_encode fails (e.g. non-serializable context), a fallback
      * JSON string is returned so logging never crashes the application.
+     *
+     * @param string          $level   Log level (e.g. 'INFO', 'WARNING', 'ERROR').
+     * @param string          $action  A short label describing the action being logged.
+     * @param array           $context Additional key-value data to include in the payload.
+     * @param \Throwable|null $e       Optional exception to attach to the payload.
      */
     private function buildLogPayload(string $level, string $action, array $context = [], ?\Throwable $e = null): string
     {
@@ -48,6 +53,9 @@ trait LoggableTrait
     /**
      * Log an informational message.
      *
+     * @param string $action  A short label describing the action being logged.
+     * @param array  $context Additional key-value data to include in the payload.
+     *
      * @warning Do NOT pass sensitive data (PII, tokens, passwords) in $context.
      */
     public function logInfo(string $action, array $context = []): void
@@ -58,6 +66,9 @@ trait LoggableTrait
     /**
      * Log a warning message.
      *
+     * @param string $action  A short label describing the action being logged.
+     * @param array  $context Additional key-value data to include in the payload.
+     *
      * @warning Do NOT pass sensitive data (PII, tokens, passwords) in $context.
      */
     public function logWarning(string $action, array $context = []): void
@@ -67,6 +78,10 @@ trait LoggableTrait
 
     /**
      * Log an error message. Pass $e to include exception details in the payload.
+     *
+     * @param string          $action  A short label describing the action being logged.
+     * @param array           $context Additional key-value data to include in the payload.
+     * @param \Throwable|null $e       Optional exception to attach to the payload.
      *
      * @warning Do NOT pass sensitive data (PII, tokens, passwords) in $context.
      */
