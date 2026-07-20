@@ -147,3 +147,24 @@ async function exportPdf(endpoint, params = {}) {
     errorHandler.catch(err)
   }
 }
+
+/**
+ * detailFetcher(endpoint)
+ * Fetches specific data for detail page.
+ */
+function detailFetcher(endpoint) {
+  return {
+    data: {},
+    loading: true,
+    async init() {
+      try {
+        const res = await api.get(endpoint)
+        this.data = res.data ?? res
+      } catch (err) {
+        errorHandler.catch(err)
+      } finally {
+        this.loading = false
+      }
+    }
+  }
+}

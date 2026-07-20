@@ -1,12 +1,6 @@
-<?php
-// Retrieve the currently logged-in user — set by BaseController::initController().
-// Falls back to auth() helper directly if $currentUser was not passed by the controller.
-if (! isset($currentUser)) {
-    $currentUser = function_exists('auth') && auth()->loggedIn() ? auth()->user() : null;
-}
-$displayName = esc($currentUser->username ?? $currentUser->email ?? 'User');
-?>
-<header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0">
+<header
+  x-data="{ displayName: auth.getUsername() }"
+  class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0">
 
   <!-- Left: page context (placeholder — override per page if needed) -->
   <div class="flex items-center gap-2">
@@ -23,10 +17,8 @@ $displayName = esc($currentUser->username ?? $currentUser->email ?? 'User');
   <!-- Right: user info + logout -->
   <div class="flex items-center gap-4">
 
-    <!-- Logged-in user name -->
-    <span class="text-sm text-gray-700 font-medium">
-      <?= $displayName ?>
-    </span>
+    <!-- Logged-in user name — read from localStorage via auth.js -->
+    <span x-text="displayName" class="text-sm text-gray-700 font-medium"></span>
 
     <!-- Logout button — calls auth.logout() -->
     <button type="button"

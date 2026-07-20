@@ -36,8 +36,12 @@ const api = {
     }
 
     if (res.status === 401) {
-      auth.logout()
-      return
+      // Jangan auto-logout untuk endpoint login itu sendiri
+      if (!url.includes('/auth/login')) {
+        auth.logout()
+        return
+      }
+      throw { message: json.message || 'Email atau password salah.' }
     }
 
     if (res.status === 422) {
