@@ -23,8 +23,8 @@
                     try {
                         const formData = { email: this.email, password: this.password };
                         const data = await api.post('/api/auth/login', formData);
-                        auth.setToken(data.token);
-                        auth.setUsername(data.username || data.email || '');
+                        auth.setToken(data.data.token);
+                        auth.setUsername(data.data.username || data.data.email || '');
                         window.location.href = '/dashboard';
                     } catch (err) {
                         if (err?.errors) {

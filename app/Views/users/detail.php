@@ -4,7 +4,26 @@
 
 <?= $this->include('_partials/page_header') ?>
 
-<div x-data="{ ...detailFetcher('/api/users/<?= esc($id) ?>'), editMode: false, user: { username: '', email: '' } }"
+<div x-data="{
+    ...detailFetcher('/api/users/<?= esc($id) ?>'),
+    editMode: false,
+    user: { username: '', email: '' },
+    errors: {},
+    isSubmitting: false,
+    async submitForm(data) {
+        this.isSubmitting = true;
+        this.errors = {};
+        try {
+            await api.request('PUT', '/api/users/<?= esc($id) ?>', data);
+        } catch (err) {
+            if (err && err.errors) {
+                this.errors = err.errors;
+            }
+        } finally {
+            this.isSubmitting = false;
+        }
+    }
+}"
      x-init="init().then(() => { user.username = data.username; user.email = data.email })">
 
     <!-- Loading -->
@@ -53,8 +72,7 @@
         <!-- Edit Mode -->
         <div x-show="editMode" class="bg-white rounded-lg border border-gray-200 p-6" style="display: none;">
             <h3 class="text-sm font-semibold text-gray-900 mb-4">Edit User</h3>
-            <form x-data="formHandler('/api/users/<?= esc($id) ?>', 'PUT')"
-                  @submit.prevent="submit(user).then(() => {
+            <form @submit.prevent="submitForm(user).then(() => {
                       if (Object.keys(errors).length === 0) {
                           data.username = user.username;
                           data.email = user.email;
@@ -80,7 +98,8 @@
                         <span x-show="errors.email" x-text="errors.email" class="mt-1 text-xs text-red-600 block"></span>
                     </div>
 
-                    <?= $this->include('_partials/submit_group', ['cancelClick' => 'editMode = false; user.username = data.username; user.email = data.email']) ?>
+                    <?php $this->setVar('cancelClick', 'editMode = false; user.username = data.username; user.email = data.email'); ?>
+                    <?= $this->include('_partials/submit_group') ?>
                 </div>
             </form>
         </div>

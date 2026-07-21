@@ -34,7 +34,8 @@
                 <span x-show="errors.password" x-text="errors.password" class="mt-1 text-xs text-red-600 block"></span>
             </div>
 
-            <?= $this->include('_partials/submit_group', ['cancelUrl' => '/users']) ?>
+            <?php $this->setVar('cancelUrl', '/users'); ?>
+            <?= $this->include('_partials/submit_group') ?>
         </div>
     </form>
 </div>

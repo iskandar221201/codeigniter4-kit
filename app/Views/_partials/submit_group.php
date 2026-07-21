@@ -32,7 +32,7 @@ $cancelClick        = $cancelClick        ?? null;
         </a>
     <?php elseif ($cancelClick): ?>
         <button type="button"
-            @click="<?= esc($cancelClick, 'js') ?>"
+            @click="<?= esc($cancelClick, 'raw') ?>"
             class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
             <?= esc($cancelLabel) ?>
         </button>
