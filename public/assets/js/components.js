@@ -155,6 +155,130 @@ async function exportPdf(endpoint, params = {}) {
 }
 
 /**
+ * datepicker(fieldName, initialValue)
+ * Reusable date picker with calendar overlay, month navigation, and click-outside dismiss.
+ * Renders a hidden input for form submission with the selected value (YYYY-MM-DD).
+ *
+ * @param {string} fieldName    - Input name attribute value
+ * @param {string} initialValue - Initial date in YYYY-MM-DD format (optional)
+ */
+function datepicker(fieldName, initialValue = '') {
+  const months = [
+    'Januari','Februari','Maret','April','Mei','Juni',
+    'Juli','Agustus','September','Oktober','November','Desember'
+  ]
+  const today = new Date()
+
+  let initMonth = today.getMonth()
+  let initYear  = today.getFullYear()
+  let initDisplay = ''
+
+  if (initialValue) {
+    const d = new Date(initialValue + 'T00:00:00')
+    if (!isNaN(d.getTime())) {
+      initMonth   = d.getMonth()
+      initYear    = d.getFullYear()
+      initDisplay = d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear()
+    }
+  }
+
+  return {
+    open:          false,
+    name:          fieldName,
+    selectedValue: initialValue,
+    displayText:   initDisplay,
+    currentMonth:  initMonth,
+    currentYear:   initYear,
+    months,
+    daysOfWeek: ['Min','Sen','Sel','Rab','Kam','Jum','Sab'],
+
+    openCalendar() {
+      this.open = true
+    },
+
+    closeCalendar() {
+      this.open = false
+    },
+
+    prevMonth() {
+      if (this.currentMonth === 0) {
+        this.currentMonth = 11
+        this.currentYear--
+      } else {
+        this.currentMonth--
+      }
+    },
+
+    nextMonth() {
+      if (this.currentMonth === 11) {
+        this.currentMonth = 0
+        this.currentYear++
+      } else {
+        this.currentMonth++
+      }
+    },
+
+    selectDate(day) {
+      const month  = String(this.currentMonth + 1).padStart(2, '0')
+      const dayStr = String(day).padStart(2, '0')
+      this.selectedValue = this.currentYear + '-' + month + '-' + dayStr
+      this.displayText   = day + ' ' + this.months[this.currentMonth] + ' ' + this.currentYear
+      this.open          = false
+    },
+
+    isSelected(day) {
+      if (!this.selectedValue) return false
+      const d = new Date(this.selectedValue + 'T00:00:00')
+      return d.getDate() === day && d.getMonth() === this.currentMonth && d.getFullYear() === this.currentYear
+    },
+
+    isToday(day) {
+      const t = new Date()
+      return t.getDate() === day && t.getMonth() === this.currentMonth && t.getFullYear() === this.currentYear
+    },
+
+    calendarDays() {
+      const firstDay    = new Date(this.currentYear, this.currentMonth, 1).getDay()
+      const daysInMonth = new Date(this.currentYear, this.currentMonth + 1, 0).getDate()
+      const days = []
+      for (let i = 0; i < firstDay; i++) days.push(null)
+      for (let i = 1; i <= daysInMonth; i++) days.push(i)
+      return days
+    },
+  }
+}
+
+/**
+ * currencyInput(fieldName, initialValue)
+ * Currency/price input with auto-formatting (Indonesian thousand separator — dots).
+ * Strips non-digit characters as the user types and formats with dot separators.
+ * The raw numeric string is stored in a hidden input for form submission.
+ *
+ * @param {string} fieldName    - Input name attribute value
+ * @param {string} initialValue - Default numeric value as a string (optional)
+ */
+function currencyInput(fieldName, initialValue = '') {
+  const raw = String(initialValue).replace(/\D/g, '')
+  const fmt = raw ? raw.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : ''
+
+  return {
+    name:        fieldName,
+    rawValue:    raw,
+    displayText: fmt,
+
+    format(numStr) {
+      return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+    },
+
+    onInput(event) {
+      const raw = event.target.value.replace(/\D/g, '')
+      this.rawValue    = raw
+      this.displayText = raw ? this.format(raw) : ''
+    },
+  }
+}
+
+/**
  * sidebarStore()
  * Manages mobile sidebar open/close state.
  * Used by _layouts/main.php and _partials/sidebar.php, _partials/navbar.php

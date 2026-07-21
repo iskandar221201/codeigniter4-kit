@@ -58,6 +58,7 @@ $routes->group('', static function ($routes) {
     // or by custom web auth filter if using session auth. Since CI4 Kit v3 uses token auth,
     // the views layer is public and auth redirect is handled by JS.
     $routes->get('dashboard', 'Web\DashboardController::index');
+    $routes->get('showcase', 'Web\ShowcaseController::index');
 });
 
 

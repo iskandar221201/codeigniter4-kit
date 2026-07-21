@@ -13,16 +13,18 @@
  * @var string $color (required) 'green' | 'red' | 'yellow' | 'blue' | 'gray'
  */
 
-$colorMap = [
-    'green'  => 'bg-green-100 text-green-800',
-    'red'    => 'bg-red-100 text-red-800',
-    'yellow' => 'bg-yellow-100 text-yellow-800',
-    'blue'   => 'bg-blue-100 text-blue-800',
-    'gray'   => 'bg-gray-100 text-gray-800',
-];
-
-$classes = $colorMap[$color ?? 'gray'] ?? $colorMap['gray'];
+$color ??= 'gray';
 ?>
-<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $classes ?>">
+<?php
+$colorStyles = [
+    'green'  => 'background-color:#dcfce7;color:#166534',
+    'red'    => 'background-color:#fee2e2;color:#991b1b',
+    'yellow' => 'background-color:#fef9c3;color:#92400e',
+    'blue'   => 'background-color:#dbeafe;color:#1e40af',
+    'gray'   => 'background-color:#f3f4f6;color:#1f2937',
+];
+$style = $colorStyles[$color] ?? $colorStyles['gray'];
+?>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style="<?= $style ?>">
   <?= esc($label ?? '') ?>
 </span>
