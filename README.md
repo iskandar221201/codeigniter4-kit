@@ -846,6 +846,22 @@ $publisher->publish('orders', [
 
 `WsPublisher` is automatically called from `BaseService` lifecycle hooks — any Service that overrides `afterCreate`, `afterUpdate`, or `afterDelete` will push events without additional code. Channel names are auto-normalized to `model:{resource}` (e.g. `App\Models\OrderModel` → `model:order`).
 
+**Safety:** By default, the published payload contains only `{action, id}` — no record data is broadcast. To include specific fields in the WebSocket event, override `getWsPayload()` in your Service subclass:
+
+```php
+// app/Services/OrderService.php
+protected function getWsPayload(string $action, int|string $id, array $data): array
+{
+    return [
+        'action' => $action,
+        'id'     => $id,
+        'status' => $data['status'] ?? null,
+    ];
+}
+```
+
+> Never include passwords, tokens, or PII in the payload. Only expose data that is safe for WebSocket clients to receive.
+
 ### Connect from JavaScript
 
 ```javascript
@@ -887,6 +903,7 @@ ws.send(JSON.stringify({ type: 'subscribe', channel: 'model:order' }));
 - When `WS_ENABLED=false`, `WsPublisher::publish()` is a silent no-op — zero overhead.
 - The WsServer validates the `X-WS-Secret` header on every publish request. The CI4 and Ratchet processes must share the same `WS_SECRET` value.
 - Two separate ports: `WS_PORT` (8081) for WebSocket clients, `WS_HTTP_PORT` (8082) for internal CI4 → Ratchet HTTP publish. Firewall `WS_HTTP_PORT` from external access.
+- `WS_HOST` must remain `127.0.0.1` in production. Changing it exposes the internal HTTP publish endpoint to the network. A runtime warning is logged if the host is not `127.0.0.1`.
 - Channels are created on first subscription. When the last client unsubscribes, the channel is cleaned up.
 - The server runs as a single process. For horizontal scaling, consider a future Redis-backed pub/sub adapter.
 

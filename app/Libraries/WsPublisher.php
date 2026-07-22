@@ -40,7 +40,7 @@ class WsPublisher
                         'Content-Length: ' . strlen($json),
                     ]),
                     'content' => $json,
-                    'timeout' => 2,
+                    'timeout' => $this->config->publishTimeout,
                 ],
             ]);
 

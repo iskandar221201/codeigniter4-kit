@@ -28,6 +28,10 @@ class WsServer implements MessageComponentInterface
 
     private int $connectionCounter = 0;
 
+    private array $messageTimestamps = [];
+
+    private int $channelCount = 0;
+
     public function __construct(?WsConfig $config = null)
     {
         $this->config = $config ?? config('WsConfig');
@@ -75,6 +79,10 @@ class WsServer implements MessageComponentInterface
             $this->config->httpPort
         ));
 
+        if ($this->config->host !== '127.0.0.1') {
+            log_message('warning', '[WsServer] WS_HOST is not 127.0.0.1 — HTTP publish port is exposed to the network');
+        }
+
         $loop->run();
     }
 
@@ -94,6 +102,14 @@ class WsServer implements MessageComponentInterface
 
     public function onMessage(ConnectionInterface $from, $msg): void
     {
+        if ($this->isRateLimited($from)) {
+            return;
+        }
+
+        if (strlen((string) $msg) > $this->config->maxPayload) {
+            return;
+        }
+
         $data = json_decode((string) $msg, true);
 
         if (!is_array($data) || !isset($data['type'])) {
@@ -115,15 +131,13 @@ class WsServer implements MessageComponentInterface
 
         if ($connectionId !== null && isset($this->clientChannels[$connectionId])) {
             foreach (array_keys($this->clientChannels[$connectionId]) as $channel) {
-                unset($this->channels[$channel][$connectionId]);
-
-                if (empty($this->channels[$channel])) {
-                    unset($this->channels[$channel]);
-                }
+                $this->cleanupChannel($channel, $conn);
             }
 
             unset($this->clientChannels[$connectionId]);
         }
+
+        unset($this->messageTimestamps[$conn->resourceId]);
 
         $this->clients->detach($conn);
     }
@@ -146,36 +160,26 @@ class WsServer implements MessageComponentInterface
             return;
         }
 
-        $connectionId = $conn->connectionId;
-
-        if (!isset($this->channels[$channel])) {
-            $this->channels[$channel] = [];
-        }
-
-        $this->channels[$channel][$connectionId] = $conn;
-        $this->clientChannels[$connectionId][$channel] = true;
+        $this->subscribeToChannel($conn, $channel);
     }
 
     private function handleUnsubscribe(ConnectionInterface $conn, array $data): void
     {
         $channel = $data['channel'] ?? '';
-        $connectionId = $conn->connectionId;
 
-        if ($connectionId !== null && isset($this->channels[$channel][$connectionId])) {
-            unset($this->channels[$channel][$connectionId]);
-
-            if (empty($this->channels[$channel])) {
-                unset($this->channels[$channel]);
-            }
-
-            unset($this->clientChannels[$connectionId][$channel]);
-        }
+        $this->cleanupChannel($channel, $conn);
     }
 
     private function handleHttp(ServerRequestInterface $request): Response
     {
         if ($request->getMethod() !== 'POST' || (string) $request->getUri()->getPath() !== '/publish') {
             return new Response(404, ['Content-Type' => 'application/json'], json_encode(['error' => 'Not found']));
+        }
+
+        $contentLength = (int) $request->getHeaderLine('Content-Length');
+
+        if ($contentLength > $this->config->maxPayload) {
+            return new Response(413, ['Content-Type' => 'application/json'], json_encode(['error' => 'Payload too large']));
         }
 
         $secret = $request->getHeaderLine('X-WS-Secret');
@@ -215,6 +219,57 @@ class WsServer implements MessageComponentInterface
 
         foreach ($this->channels[$channel] as $conn) {
             $conn->send($message);
+        }
+    }
+
+    private function isRateLimited(ConnectionInterface $conn): bool
+    {
+        $id  = $conn->resourceId;
+        $now = microtime(true);
+
+        if (isset($this->messageTimestamps[$id]) && ($now - $this->messageTimestamps[$id]) < (1 / $this->config->rateLimit)) {
+            return true;
+        }
+
+        $this->messageTimestamps[$id] = $now;
+
+        return false;
+    }
+
+    private function subscribeToChannel(ConnectionInterface $conn, string $channel): void
+    {
+        if (!isset($this->channels[$channel])) {
+            if ($this->channelCount >= $this->config->maxChannels) {
+                $conn->send(json_encode([
+                    'type' => 'error',
+                    'message' => 'Channel limit reached',
+                ]));
+                return;
+            }
+
+            $this->channels[$channel] = [];
+            $this->channelCount++;
+        }
+
+        $connectionId = $conn->connectionId;
+        $this->channels[$channel][$connectionId] = $conn;
+        $this->clientChannels[$connectionId][$channel] = true;
+    }
+
+    private function cleanupChannel(string $channel, ConnectionInterface $conn): void
+    {
+        $connectionId = $conn->connectionId;
+
+        if ($connectionId === null || !isset($this->channels[$channel][$connectionId])) {
+            return;
+        }
+
+        unset($this->channels[$channel][$connectionId]);
+        unset($this->clientChannels[$connectionId][$channel]);
+
+        if ($this->channels[$channel] === []) {
+            unset($this->channels[$channel]);
+            $this->channelCount--;
         }
     }
 
