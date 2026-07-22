@@ -158,13 +158,50 @@ abstract class BaseService
 
     protected function afterCreate(int|string $id, array $data): void
     {
+        $this->wsPublish('create', $id, $data);
     }
 
     protected function afterUpdate(int|string $id, array $data): void
     {
+        $this->wsPublish('update', $id, $data);
     }
 
     protected function afterDelete(int|string $id, array $oldData): void
     {
+        $this->wsPublish('delete', $id, $oldData);
+    }
+
+    protected function getWsPayload(string $action, int|string $id, array $data): array
+    {
+        return ['action' => $action, 'id' => $id];
+    }
+
+    private ?string $wsChannel = null;
+
+    private function getWsChannel(): string
+    {
+        if ($this->wsChannel === null) {
+            $this->wsChannel = 'model:' . strtolower(
+                str_replace(
+                    'model',
+                    '',
+                    basename(str_replace('\\', '/', $this->modelClass))
+                )
+            );
+        }
+
+        return $this->wsChannel;
+    }
+
+    private function wsPublish(string $action, int|string $id, array $data): void
+    {
+        try {
+            (new \App\Libraries\WsPublisher())->publish(
+                $this->getWsChannel(),
+                $this->getWsPayload($action, $id, $data)
+            );
+        } catch (\Throwable $e) {
+            log_message('error', '[BaseService] wsPublish failed: ' . $e->getMessage());
+        }
     }
 }
